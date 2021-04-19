@@ -17,10 +17,10 @@ frameHeight = 480
 
 
 #Establishes serial connection with the Arduino before the code can be run
-if __name__ == '__main__':
-	ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
-	#ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
-	ser.flush()
+#if __name__ == '__main__':
+#	ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
+#	#ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+#	ser.flush()
 
 # This commande activates the video capture
 cap = cv2.VideoCapture(0)
@@ -86,20 +86,20 @@ def comnd(ipt):
 			#ipt = list(ipt)
 			#ipt = ipt[1]
 			print("Sending:   ",ipt)
-			ser.write(str(ipt).encode('utf-8'))
+			#ser.write(str(ipt).encode('utf-8'))
 			sleep(.5)
-			while ser.in_waiting > 0:
-				line = ser.readline().decode('utf-8').rstrip()
-				print(line)
+			#while ser.in_waiting > 0:
+			#	line = ser.readline().decode('utf-8').rstrip()
+			#	print(line)
 	return ipt
 
 
 # Main loop of the script
 
 while True:
-	ipt = []
-	ipt = comnd(ipt)
-	while ipt == "T":
+	#ipt = []
+	#ipt = comnd(ipt)
+	#while ipt == "T":
 		#if keyboard.is_pressed('b'):
 		#	break
 		_,frame = cap.read()
@@ -122,7 +122,7 @@ while True:
 		# mask is the masked image of the blured hsv that seeks values of h,s,and v
 		# within the specified bounds
 		mask = cv2.inRange(hsv, lg, ug)
-
+                
 		#print(len(mask))
 
 		#imgGray and Canny are unused currently, haven't figured out if this is
@@ -133,10 +133,7 @@ while True:
 		imgDil = cv2.dilate(mask, kernel, iterations = 1)
 		b = False
 		getContours(imgDil, imgContours)
-
-
-	#	Image outputs for the pure image, the masked image, and the contours
-
+#		Image outputs for the pure image, the masked image, and the contours
 		cv2.imshow("Frame: ",frame)
 		cv2.imshow("HSV:   ",hsv)
 		cv2.imshow("HSV Blur  ", imgBlur)
@@ -148,25 +145,25 @@ while True:
 		if (b == True and area < 100000):
 			#print(cent)
 			if (cent < 80):
-				ser.write(str(2).encode('utf-8'))
+				#ser.write(str(2).encode('utf-8'))
 				#sleep(.4)
 				print("left")
 			if (cent > 510):
-				ser.write(str(3).encode('utf-8'))
+				#ser.write(str(3).encode('utf-8'))
 				print("right")
 				#sleep(.4)
 			if (cent >=  80 and cent <= 510):
-				ser.write(str(1).encode('utf-8'))
+				#ser.write(str(1).encode('utf-8'))
 				print("straight")
 				#sleep(.4)
-		else:
-			ser.write(str(0).encode('utf-8'))
-
+			#ser.write(str(0).encode('utf-8'))
 		# Command to read back what was sent to the Arduino
-		while ser.in_waiting > 0:
-			line = ser.readline().decode('utf-8').rstrip()
-			print(line)
+		#while ser.in_waiting > 0:
+		#	line = ser.readline().decode('utf-8').rstrip()
+			#print(line)
 		# If this if statement is removed, the output will be just a still Image
 		# not a video
-		if cv2.waitKey(1) & 0xFF == ord('q'):
-			break
+		
+		
+	if cv2.waitKey(1) & 0xFF == ord('q'):
+		break
