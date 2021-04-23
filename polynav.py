@@ -19,14 +19,15 @@ def empty(a):
 
 cv2.namedWindow("Parameters")
 cv2.resizeWindow("Parameters",800,600)
-cv2.createTrackbar("Thresh 1","Parameters",150,255,empty)
-cv2.createTrackbar("Thresh 2","Parameters",255,255,empty)
+cv2.createTrackbar("Thresh 1","Parameters",43,255,empty)
+cv2.createTrackbar("Thresh 2","Parameters",20,255,empty)
 cv2.createTrackbar("Threshold1","Parameters",11,20,empty)
 cv2.createTrackbar("Threshold2","Parameters",2,10,empty)
 
-cv2.createTrackbar("Frame Ratio","Parameters",7,10,empty)
+cv2.createTrackbar("Frame Ratio","Parameters",6,10,empty)
 cv2.createTrackbar("Sensetivity","Parameters", 4,10,empty)
-cv2.createTrackbar("Area","Parameters",5000,30000,empty)
+cv2.createTrackbar("Area Min","Parameters",1000,30000,empty)
+cv2.createTrackbar("Area Max","Parameters",5000,100000,empty)
 ROI_FRAME_RATIO = cv2.getTrackbarPos("Frame Ratio", "Parameters")/10
 
 ROWS = int(frameHeight * ROI_FRAME_RATIO)
@@ -114,15 +115,16 @@ def poly_cont(img):
     #bin_image = ~bin_image
     cv2.imshow("Binary",bin_image)
     contours, hierarchy = cv2.findContours(bin_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-
+    #Might want to put the ConvexHull here
     return contours, hierarchy
 
 def findpath(img,imgContour,points,contours,Vis):
     angle_deviation = 0
     distance_unobstructed = 0
     area_unobstructed = 0
-    MIN_CONTOUR_AREA = cv2.getTrackbarPos("Area","Parameters") 
-    rows,cols = 600,800
+    MIN_CONTOUR_AREA = cv2.getTrackbarPos("Area Min","Parameters") 
+    MAX_CONTOUR_AREA = cv2.getTrackbarPos("Area Max","Parameters")
+    rows,cols = 600 ,800
 
     if contours is None:
         return -1, -1, -1
@@ -132,7 +134,8 @@ def findpath(img,imgContour,points,contours,Vis):
     ROWS = int(frameHeight * cv2.getTrackbarPos("Frame Ratio","Parameters")/10)
     COLS = int(frameWidth)
     for cnt in contours:
-        if cv2.contourArea(cnt) > MIN_CONTOUR_AREA:
+        if cv2.contourArea(cnt) > MIN_CONTOUR_AREA and cv2.contourArea(cnt) < MAX_CONTOUR_AREA:
+            cnt = cv2.convexHull(cnt)
             moments = cv2.moments(cnt)
             com_x = int(moments['m10']/moments['m00'])
             com_y = int(moments['m01']/moments['m00'])
@@ -145,14 +148,14 @@ def findpath(img,imgContour,points,contours,Vis):
         return -1, -1, -1
     for item in cnt_list:
         if item[2] == y_list[-1]:
-            angle_deviation = int(math.atan((int(cols/2) - item[1])/(rows - item[2])) * 180 / math.pi)
-            distance_unobstructed = int(math.sqrt(math.pow((int(cols/2) - item[1]),2) + math.pow((rows - item[2]),2)))
+            angle_deviation = int(math.atan((int(COLS/2) - item[1])/(ROWS - item[2])) * 180 / math.pi)
+            distance_unobstructed = int(math.sqrt(math.pow((int(COLS/2) - item[1]),2) + math.pow((ROWS - item[2]),2)))
             area_unobstructed = int(cv2.contourArea(item[0]))
             cv2.drawContours(imgContour,cnt,-1, (0,255,0),5) 
             if Vis:
                 cv2.circle(img,(item[1],item[2]), 3,3)
                 cv2.drawContours(img, [item[0]], 0, (0,255,0),2)
-                cv2.line(img,( int(800/2),600), (item[1], item[2]), (0,255,0),1)
+                cv2.line(img,( int(COLS/2),ROWS), (item[1], item[2]), (0,255,0),1)
                 cv2.putText(img, str(angle_deviation), (item[1] + 10, item[2] + 10),cv2.FONT_HERSHEY_COMPLEX , 1, (255,0,0),2)
                 cv2.putText(img, str(distance_unobstructed), (item[1] - 20, item[2] - 20),cv2.FONT_HERSHEY_COMPLEX , 1, (255,0,0),2)
 
@@ -173,6 +176,7 @@ def getContours(img,imgContour):
         area = cv2.contourArea(cnt)
         areaMin = cv2.getTrackbarPos("Area","Parameters")
         if area > areaMin:
+            #cnt = cv2.convexHull(cnt, True)
             cv2.drawContours(imgContour,cnt,-1, (0,255,0),5)
             pari = cv2.arcLength(cnt,True)
             approx = cv2.approxPolyDP(cnt, 0.02 * pari, True)
