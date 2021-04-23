@@ -5,22 +5,23 @@ from time import sleep
 from signal import pause
 import serial
 import os
-import keyboard
+import math
 
 #This line solves the issue of being unable to run the code in ssh given the
 #error "Cannot connect to X server"
 os.environ['DISPLAY'] = ':0'
 
 # Frame size in pixels
-frameWidth = 640
-frameHeight = 480
-
+frameWidth = 800
+frameHeight = 600
+ARDUINO = False
 
 #Establishes serial connection with the Arduino before the code can be run
-if __name__ == '__main__':
-	ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
-	#ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
-	ser.flush()
+if ARDUINO:
+	if __name__ == '__main__':
+		ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
+		#ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+		ser.flush()
 
 # This commande activates the video capture
 cap = cv2.VideoCapture(0)
@@ -33,7 +34,7 @@ def empty(a):
 
 cv2.namedWindow("Parameters")
 cv2.resizeWindow("Parameters",800,600)
-cv2.createTrackbar("Thresh 1","Parameters",43,255,empty)
+cv2.createTrackbar("Thresh 1","Parameters",90,255,empty)
 cv2.createTrackbar("Thresh 2","Parameters",20,255,empty)
 cv2.createTrackbar("Threshold1","Parameters",11,20,empty)
 cv2.createTrackbar("Threshold2","Parameters",2,10,empty)
@@ -48,8 +49,8 @@ cv2.createTrackbar("S_LOW ", "Parameters", 117,255,empty)
 cv2.createTrackbar("V_LOW ","Parameters", 151, 255,empty)
 cv2.createTrackbar("Frame Ratio","Parameters",6,10,empty)
 cv2.createTrackbar("Sensetivity","Parameters", 4,10,empty)
-cv2.createTrackbar("Area Min","Parameters",1000,30000,empty)
-cv2.createTrackbar("Area Max","Parameters",5000,100000,empty)
+cv2.createTrackbar("Area Min","Parameters",5000,30000,empty)
+cv2.createTrackbar("Area Max","Parameters",100000,500000,empty)
 ROI_FRAME_RATIO = cv2.getTrackbarPos("Frame Ratio", "Parameters")/10
 
 ROWS = int(frameHeight * ROI_FRAME_RATIO)
@@ -61,7 +62,7 @@ def getContours(img,imgContour):
 	contours,hierarchy = cv2.findContours(img,cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 	for cnt in contours:
 		area = cv2.contourArea(cnt)
-		if area > 2000:
+		if area > cv2.getTrackbarPos("Area Min","Parameters"):
 			cv2.drawContours(imgContour,cnt,-1,(0,255,0),5)
 			pari = cv2.arcLength(cnt,True)
 			approx = cv2.approxPolyDP(cnt,0.02 * pari, True)
@@ -78,8 +79,8 @@ def crop(img):
     IMAGE_X_INDEX = 0
 
     roi_vector = {'x' : 0, 'y' : 0, 'w' : 0, 'h': 0}
-    roi_vector['w'] = img.shape[IMAGE_X_INDEX]
-    roi_vector['h'] = int(img.shape[IMAGE_Y_INDEX] * cv2.getTrackbarPos("Frame Ratio","Parameters")/10)
+    roi_vector['w'] = 800
+    roi_vector['h'] = int(600 * (cv2.getTrackbarPos("Frame Ratio","Parameters")/10))
     roi_vector['x'] = 0
     roi_vector['y'] = img.shape[IMAGE_Y_INDEX] - roi_vector['h']
     y_start = roi_vector['y']
@@ -88,7 +89,8 @@ def crop(img):
     x_end = roi_vector['x'] + roi_vector['w']
     cropped = img[y_start:y_end, x_start:x_end]
     h = abs(y_start - y_end)
-    w = abs(x_start - x_end)
+    w = abs(x_start + x_end)
+    print(h,w)
     return cropped, h, w
 
 def polygon(ROWS,COLS,SENS):
@@ -107,11 +109,11 @@ def superimpose(img,points):
 
 def poly_cont(img):
 
-	bin_image = cv2.adaptiveThreshold(img, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,cv2.getTrackbarPos("Threshold1","Parameters"),cv2.getTrackbarPos("Threshold2","Parameters"))
+    bin_image = cv2.adaptiveThreshold(img, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,cv2.getTrackbarPos("Threshold1","Parameters"),cv2.getTrackbarPos("Threshold2","Parameters"))
 
 
 
-	    #ret,bin_image = cv2.threshold(img,cv2.getTrackbarPos("BW_THRESH","Parameters"), 255,cv2.THRESH_BINARY)
+     #ret,bin_image = cv2.threshold(img,cv2.getTrackbarPos("BW_THRESH","Parameters"), 255,cv2.THRESH_BINARY)
     kernel = np.ones((3,3),np.uint8)
     #bin_image = cv2.dilate(bin_image, kernel, iterations = 1)
     bin_image = cv2.erode(bin_image, kernel, iterations = 1)
@@ -158,7 +160,7 @@ def findpath(img,imgContour,points,contours,Vis):
             if Vis:
                 cv2.circle(img,(item[1],item[2]), 3,3)
                 cv2.drawContours(img, [item[0]], 0, (0,255,0),2)
-                cv2.line(img,( int(COLS/2),ROWS), (item[1], item[2]), (0,255,0),1)
+                cv2.line(img,(int(COLS/2),ROWS), (item[1], item[2]), (0,255,0),1)
                 cv2.putText(img, str(angle_deviation), (item[1] + 10, item[2] + 10),cv2.FONT_HERSHEY_COMPLEX , 1, (255,0,0),2)
                 cv2.putText(img, str(distance_unobstructed), (item[1] - 20, item[2] - 20),cv2.FONT_HERSHEY_COMPLEX , 1, (255,0,0),2)
 
@@ -169,7 +171,7 @@ def comnd(ipt):
 		ipt = input("Please Enter a Command: ")
 		if ipt == "list":
 			print("List of Commands:   ")
-			print("Command:			What it Do:		Arduino Gets:")
+			print("Command:		What it Do:")
 			print("")
 			print("F			Forward")
 			print("B			Back")
@@ -181,14 +183,15 @@ def comnd(ipt):
 			print("S			Stop")
 			ipt = []
 		else:
-			ipt = list(ipt)
-			ipt = ipt[1]
+			#ipt = list(ipt)
+			#ipt = ipt[1]
 			print("Sending:   ",ipt)
-			ser.write(str(ipt).encode('utf-8'))
-			sleep(.5)
-			while ser.in_waiting > 0:
-				line = ser.readline().decode('utf-8').rstrip()
-				print(line)
+			if ARDUINO:
+				ser.write(str(ipt).encode('utf-8'))
+				sleep(.5)
+				while ser.in_waiting > 0 and ARDUINO == True:
+					line = ser.readline().decode('utf-8').rstrip()
+					print(line)
 	return ipt
 
 
@@ -198,23 +201,19 @@ while True:
 	ipt = []
 	ipt = comnd(ipt)
 	while ipt == "T":
-		#if keyboard.is_pressed('b'):
-		#	break
 		_,frame = cap.read()
 		#print(len(frame))
 		imgContours = frame.copy()
 		#print("Inside the Balloon while")
 		# Thresholds for contour stuff (unused as of now I think)
-		threshold1 = cv2.getTrackbarPos("T1: ","Thresholds")
-		threshold2 = cv2.getTrackbarPos("T2: ","Thresholds")
+		threshold1 = cv2.getTrackbarPos("Thresh 1","Parameters")
+		threshold2 = cv2.getTrackbarPos("Thresh 2","Parameters")
 
 		# Higher and lower thresholds of the HSV values
 		lg = np.array([cv2.getTrackbarPos("H_LOW ","Parameters"),cv2.getTrackbarPos("S_LOW ","Parameters"),cv2.getTrackbarPos("V_LOW ","Parameters")])
 		ug = np.array([cv2.getTrackbarPos("H_HIGH ","Parameters"),cv2.getTrackbarPos("S_HIGH ","Parameters"),cv2.getTrackbarPos("V_HIGH ","Parameters")])
 		hsv = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
 
-		# imgBlue is a blured version of the original hsv masked image such that
-		# higher quality contours can be drawn around the ballons
 		imgBlur = cv2.GaussianBlur(hsv,(7,7),1)
 		#testBlur = cv2.GaussianBlur(frame,(7,7),1)
 		# mask is the masked image of the blured hsv that seeks values of h,s,and v
@@ -240,7 +239,7 @@ while True:
 		cv2.imshow("Contours: ", imgContours)
 		print(b)
 		#print(area)
-		if (b == True and area < 100000):
+		if (b == True and area < 100000 and Arduino == True):
 			#print(cent)
 			if (cent < 80):
 				ser.write(str(2).encode('utf-8'))
@@ -262,44 +261,44 @@ while True:
 
 	if cv2.waitKey(1) & 0xFF == ord('q'):
 		break
+	while ipt == "P":
+		threshold1 = cv2.getTrackbarPos("Thresh 1","Parameters")
+		threshold2 = cv2.getTrackbarPos("Thresh 2","Parameters")
+		lg = np.array([cv2.getTrackbarPos("H_LOW ","Parameters"),cv2.getTrackbarPos("S_LOW ","Parameters"),cv2.getTrackbarPos("V_LOW ","Parameters")])
+		ug = np.array([cv2.getTrackbarPos("H_HIGH ","Parameters"),cv2.getTrackbarPos("S_HIGH ","Parameters"),cv2.getTrackbarPos("V_HIGH ","Parameters")])
+		success, img = cap.read()
+		
+		imgHSV = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+		imgMask = cv2.inRange(imgHSV,lg,ug)
+		cropped,h,w  = crop(img)
+		
+		#cv2.imshow("Cropped: ", cropped)
+		imgContours = img.copy()
+		Sens = cv2.getTrackbarPos("Sensetivity","Parameters")/10
+		points = polygon(int(h),w,Sens)
+		imgImp = superimpose(cropped, points)
+
+		imgGray = cv2.cvtColor(imgImp,cv2.COLOR_BGR2GRAY)
+		imgBlur = cv2.medianBlur(imgGray,3)
+		imgBlur = cv2.GaussianBlur(imgGray,(5,5),0)
+		#cv2.imshow("Blur",imgBlur)
+
+		imgCanny = cv2.Canny(imgBlur,threshold1,threshold2)
+
+		cv2.imshow("Canny", imgCanny)
+		kernel = np.ones((7,7))
+		imgDil = cv2.dilate(imgCanny,kernel,iterations=1)
+		imgDil = ~imgDil
+		cv2.imshow("Dil", imgDil)
+		contours,hierarchy  = poly_cont(imgDil)
+		#contours = getContours(imgDil,imgContours)
+		findpath(cropped,imgContours,points,contours, True)
+		#findpath(cropped,imgDil,points,contours, True)
+		#imgStack = stackImages(0.8,([img,cropped],[img,img]))
+		#cv2.imshow("Image:  ",imgDil)
+		cv2.imshow("Final",cropped)
+		#cv2.imshow("Result",imgStack)
+		if cv2.waitKey(1) & 0xFF == ord('q'):
+			break
 cap.release()
 cv2.destroyAllWindows()
-
-	while ipt == "P":
-	    success, img = cap.read()
-	    print(img)
-	    cropped,h,w  = crop(img)
-	    #cv2.imshow("Cropped: ", cropped)
-	    imgContours = img.copy()
-	    Sens = cv2.getTrackbarPos("Sensetivity","Parameters")/10
-	    points = polygon(int(h),w,Sens) #polygon(int(frameHeight * Sens),frameWidth,Sens)
-	    #print(points)
-	    imgImp = superimpose(cropped, points)
-	    #imgBlur = cv2.GaussianBlur(img, (5,5),1)
-	    imgGray = cv2.cvtColor(imgImp,cv2.COLOR_BGR2GRAY)
-	    imgBlur = cv2.medianBlur(imgGray,3)
-	    imgBlur = cv2.GaussianBlur(imgGray,(5,5),0)
-	    #cv2.imshow("Blur",imgBlur)
-	    threshold1 = cv2.getTrackbarPos("Thresh 1","Parameters")
-	    threshold2 = cv2.getTrackbarPos("Thresh 2","Parameters")
-	    #imgCanny = cv2.Canny(imgGray,threshold1,threshold2)
-	    #imgCanny = cv2.Canny(imgImp,threshold1,threshold2)
-	    imgCanny = cv2.Canny(imgBlur,threshold1,threshold2)
-
-	    cv2.imshow("Canny", imgCanny)
-	    kernel = np.ones((7,7))
-	    imgDil = cv2.dilate(imgCanny,kernel,iterations=1)
-	    imgDil = ~imgDil
-	    cv2.imshow("Dil", imgDil)
-	    contours,hierarchy  = poly_cont(imgDil)
-	    #contours = getContours(imgDil,imgContours)
-	    findpath(cropped,imgContours,points,contours, True)
-	    #findpath(cropped,imgDil,points,contours, True)
-	    #imgStack = stackImages(0.8,([img,cropped],[img,img]))
-	    #cv2.imshow("Image:  ",imgDil)
-	    cv2.imshow("Final",cropped)
-	    #cv2.imshow("Result",imgStack)
-	    if cv2.waitKey(1) & 0xFF == ord('q'):
-	        break
-	cap.release()
-	cv2.destroyAllWindows()
