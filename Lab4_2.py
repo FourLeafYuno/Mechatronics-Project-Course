@@ -175,12 +175,21 @@ def comnd(ipt):
 			print("")
 			print("F			Forward")
 			print("B			Back")
-			print("r			90deg CW")
-			print("Q			180deg CW")
-			print("L			FWD Line")
-			print("T			Balloon Tracking")
-			print("I			IR Sensor Reading")
 			print("S			Stop")
+			print("R			90deg CW")
+			print("r			90deg CCW")
+			print("L			FWD Line")
+			print("*			Charge Balloon")
+			print("M			Maze Solver")
+			print("I			IR Sensor Reading")
+			print("D			Distance Check [cm]")
+			print("-			Color Check")
+			print("c			CW Large Radius")
+			print("C			CCW Large Radius")
+			print("T			Balloon Tracking")
+
+			print("Q			180deg CW")
+
 			ipt = []
 		else:
 			#ipt = list(ipt)
@@ -268,11 +277,11 @@ while True:
 		ug = np.array([cv2.getTrackbarPos("H_HIGH ","Parameters"),cv2.getTrackbarPos("S_HIGH ","Parameters"),cv2.getTrackbarPos("V_HIGH ","Parameters")])
 		success, img = cap.read()
 		
-		imgHSV = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
-		imgMask = cv2.inRange(imgHSV,lg,ug)
+
 		cropped,h,w  = crop(img)
-		
-		#cv2.imshow("Cropped: ", cropped)
+		imgHSV = cv2.cvtColor(cropped,cv2.COLOR_BGR2HSV)
+		imgMask = cv2.inRange(imgHSV,lg,ug)
+		cv2.imshow("Mask: ", imgMask)
 		imgContours = img.copy()
 		Sens = cv2.getTrackbarPos("Sensetivity","Parameters")/10
 		points = polygon(int(h),w,Sens)
@@ -291,8 +300,11 @@ while True:
 		imgDil = ~imgDil
 		cv2.imshow("Dil", imgDil)
 		contours,hierarchy  = poly_cont(imgDil)
-		#contours = getContours(imgDil,imgContours)
-		findpath(cropped,imgContours,points,contours, True)
+		contours_p = getContours(imgMask,cropped)
+		angle_deviation, distance_unobstructed, area_unobstructed = findpath(cropped,imgContours,points,contours, True)
+		if ARDUINO:
+			ser.write(str(angle_deviation).encode('utf-8'))
+			ser.write(str(distance_unobstructed).encode('utf-8'))
 		#findpath(cropped,imgDil,points,contours, True)
 		#imgStack = stackImages(0.8,([img,cropped],[img,img]))
 		#cv2.imshow("Image:  ",imgDil)
