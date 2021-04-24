@@ -187,6 +187,7 @@ def comnd(ipt):
             print("c            CW Large Radius")
             print("C            CCW Large Radius")
             print("T            Balloon Tracking")
+            print("W            FOR THE WIN!") 
 
             print("Q            180deg CW")
 
@@ -276,9 +277,9 @@ while True:
         lg = np.array([cv2.getTrackbarPos("H_LOW ","Parameters"),cv2.getTrackbarPos("S_LOW ","Parameters"),cv2.getTrackbarPos("V_LOW ","Parameters")])
         ug = np.array([cv2.getTrackbarPos("H_HIGH ","Parameters"),cv2.getTrackbarPos("S_HIGH ","Parameters"),cv2.getTrackbarPos("V_HIGH ","Parameters")])
         success, img = cap.read()
-        print("Hello")
+        #print("Hello")
         cropped,h,w  = crop(img)
-        print("Goodbye")
+        #print("Goodbye")
         imgHSV = cv2.cvtColor(cropped,cv2.COLOR_BGR2HSV)
         imgMask = cv2.inRange(imgHSV,lg,ug)
         cv2.imshow("Mask: ", imgMask)
@@ -302,9 +303,16 @@ while True:
         contours,hierarchy  = poly_cont(imgDil)
         contours_p = getContours(imgMask,cropped)
         angle_deviation, distance_unobstructed, area_unobstructed = findpath(cropped,imgContours,points,contours, True)
+
+        #Currently the ser.write is sending integers one character at a time. Cant get it to take them as a whole.
+        #Also might have to take the sleep out to get better performance.(4/23 7:18p)
         if ARDUINO:
             ser.write(str(angle_deviation).encode('utf-8'))
-            ser.write(str(distance_unobstructed).encode('utf-8'))
+            sleep(0.4)
+            #ser.write(int(distance_unobstructed))
+            while ser.in_waiting > 0:
+                line = ser.readline().decode('utf-8').rstrip()
+                print(line)
         #findpath(cropped,imgDil,points,contours, True)
         #imgStack = stackImages(0.8,([img,cropped],[img,img]))
         #cv2.imshow("Image:  ",imgDil)
