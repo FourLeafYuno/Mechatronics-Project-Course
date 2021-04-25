@@ -9,18 +9,18 @@ import math
 
 #This line solves the issue of being unable to run the code in ssh given the
 #error "Cannot connect to X server"
-os.environ['DISPLAY'] = ':0'
+#os.environ['DISPLAY'] = ':0'
 
 # Frame size in pixels
 frameWidth = 800
 frameHeight = 600
-ARDUINO = False
+ARDUINO = True
 VS = "red"
 
 #Establishes serial connection with the Arduino before the code can be run
 if ARDUINO:
     if __name__ == '__main__':
-        ser = serial.Serial('/dev/ttyUSB1', 115200, timeout=1)
+        ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
         #ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
         ser.flush()
 
@@ -35,7 +35,7 @@ def empty(a):
 
 cv2.namedWindow("Parameters")
 cv2.resizeWindow("Parameters",800,600)
-cv2.createTrackbar("Thresh 1","Parameters",80,255,empty)
+cv2.createTrackbar("Thresh 1","Parameters",70,255,empty)
 cv2.createTrackbar("Thresh 2","Parameters",20,255,empty)
 cv2.createTrackbar("Threshold1","Parameters",11,20,empty)
 cv2.createTrackbar("Threshold2","Parameters",2,10,empty)
@@ -65,9 +65,9 @@ if VS == "yellow":
     cv2.createTrackbar("S_LOW ", "Parameters", 117,255,empty)
     cv2.createTrackbar("V_LOW ","Parameters", 151, 255,empty)
 
-cv2.createTrackbar("Frame Ratio","Parameters",6,10,empty)
+cv2.createTrackbar("Frame Ratio","Parameters",8,10,empty)
 cv2.createTrackbar("Sensetivity","Parameters", 4,10,empty)
-cv2.createTrackbar("Area Min","Parameters",10000,30000,empty)
+cv2.createTrackbar("Area Min","Parameters",15000,30000,empty)
 cv2.createTrackbar("Area Max","Parameters",400000,500000,empty)
 ROI_FRAME_RATIO = cv2.getTrackbarPos("Frame Ratio", "Parameters")/10
 
@@ -122,7 +122,7 @@ def polygon(ROWS,COLS,SENS):
 
 def superimpose(img,points):
     cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    cv2.polylines(img,[points],True,(0,255,0),5)
+    cv2.polylines(img,[points],True,(0,0,0),5)
     return img
 
 def poly_cont(img):
@@ -160,7 +160,7 @@ def findpath(img,imgContour,points,contours,Vis):
         pari = cv2.arcLength(cnt,True)
         approx = cv2.approxPolyDP(cnt,0.02 * pari, True)
         #print(len(approx))
-        if cv2.contourArea(cnt) > MIN_CONTOUR_AREA and cv2.contourArea(cnt) < MAX_CONTOUR_AREA and len(approx) >=  6 and len(approx) <=7:
+        if cv2.contourArea(cnt) > MIN_CONTOUR_AREA and cv2.contourArea(cnt) < MAX_CONTOUR_AREA:
             cnt = cv2.convexHull(cnt)
             moments = cv2.moments(cnt)
             #approx = cv2.approxPolyDP(cnt,0.02 * pari, True) 
@@ -304,7 +304,7 @@ while True:
         #print("Goodbye")
         imgHSV = cv2.cvtColor(cropped,cv2.COLOR_BGR2HSV)
         imgMask = cv2.inRange(imgHSV,lg,ug)
-        cv2.imshow("Mask: ", imgMask)
+        #cv2.imshow("Mask: ", imgMask)
         imgContours = img.copy()
         Sens = cv2.getTrackbarPos("Sensetivity","Parameters")/10
         points = polygon(int(h),w,Sens)
@@ -321,17 +321,29 @@ while True:
         kernel = np.ones((7,7))
         imgDil = cv2.dilate(imgCanny,kernel,iterations=1)
         imgDil = ~imgDil
-        cv2.imshow("Dil", imgDil)
+        #cv2.imshow("Dil", imgDil)
         contours,hierarchy  = poly_cont(imgDil)
         contours_p = getContours(imgMask,cropped)
         angle_deviation, distance_unobstructed, area_unobstructed = findpath(cropped,imgContours,points,contours, True)
 
         #Currently the ser.write is sending integers one character at a time. Cant get it to take them as a whole.
         #Also might have to take the sleep out to get better performance.(4/23 7:18p)
-        if ARDUINO:
-            ser.write(int(angle_deviation)) 
-            #ser.write(str(angle_deviation).encode('utf-8'))
-            sleep(0.4)
+        if ARDUINO and angle_deviation < 30:
+            #ser.write(int(angle_deviation)) 
+            #ser.write(int(angle_deviation).encode('utf-8'))
+            if (angle_deviation < -10):
+                ser.write(str(2).encode('utf-8'))
+                sleep(.1)
+                print("left")
+            if (angle_deviation > 10):
+                ser.write(str(3).encode('utf-8'))
+                print("right")
+                sleep(.1)
+            if (angle_deviation >=  -10 and angle_deviation <= 10):
+                ser.write(str(1).encode('utf-8'))
+                print("straight")
+                sleep(.1)
+            #sleep(0.4)
             while ser.in_waiting > 0:
                 line = ser.readline().decode('utf-8').rstrip()
                 print(line)
