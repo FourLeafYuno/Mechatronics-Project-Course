@@ -12,9 +12,10 @@ import math
 os.environ['DISPLAY'] = ':0'
 
 # Frame size in pixels
-frameWidth = 640
-frameHeight = 480
-ARDUINO = True
+frameWidth = 800
+frameHeight = 600
+ARDUINO = False
+VS = "red"
 
 #Establishes serial connection with the Arduino before the code can be run
 if ARDUINO:
@@ -34,23 +35,40 @@ def empty(a):
 
 cv2.namedWindow("Parameters")
 cv2.resizeWindow("Parameters",800,600)
-cv2.createTrackbar("Thresh 1","Parameters",90,255,empty)
+cv2.createTrackbar("Thresh 1","Parameters",80,255,empty)
 cv2.createTrackbar("Thresh 2","Parameters",20,255,empty)
 cv2.createTrackbar("Threshold1","Parameters",11,20,empty)
 cv2.createTrackbar("Threshold2","Parameters",2,10,empty)
 
 #Generates the slider bar window with values pre-set for the Red balloon
 #as of now
-cv2.createTrackbar("H_HIGH ","Parameters", 255,255,empty)
-cv2.createTrackbar("S_HIGH ","Parameters", 218,255,empty)
-cv2.createTrackbar("V_HIGH ","Parameters", 255,255,empty)
-cv2.createTrackbar("H_LOW ", "Parameters", 0, 255, empty)
-cv2.createTrackbar("S_LOW ", "Parameters", 117,255,empty)
-cv2.createTrackbar("V_LOW ","Parameters", 151, 255,empty)
+if VS == "red":
+    cv2.createTrackbar("H_HIGH ","Parameters", 193,255,empty)
+    cv2.createTrackbar("S_HIGH ","Parameters", 214,255,empty)
+    cv2.createTrackbar("V_HIGH ","Parameters", 187,255,empty)
+    cv2.createTrackbar("H_LOW ", "Parameters", 0, 255, empty)
+    cv2.createTrackbar("S_LOW ", "Parameters", 116,255,empty)
+    cv2.createTrackbar("V_LOW ","Parameters", 140, 255,empty)
+if VS == "blue":
+    cv2.createTrackbar("H_HIGH ","Parameters", 123,255,empty)
+    cv2.createTrackbar("S_HIGH ","Parameters", 255,255,empty)
+    cv2.createTrackbar("V_HIGH ","Parameters", 255,255,empty)
+    cv2.createTrackbar("H_LOW ", "Parameters", 84, 255, empty)
+    cv2.createTrackbar("S_LOW ", "Parameters", 148,255,empty)
+    cv2.createTrackbar("V_LOW ","Parameters", 96, 255,empty) 
+
+if VS == "yellow":
+    cv2.createTrackbar("H_HIGH ","Parameters", 255,255,empty)
+    cv2.createTrackbar("S_HIGH ","Parameters", 218,255,empty)
+    cv2.createTrackbar("V_HIGH ","Parameters", 255,255,empty)
+    cv2.createTrackbar("H_LOW ", "Parameters", 0, 255, empty)
+    cv2.createTrackbar("S_LOW ", "Parameters", 117,255,empty)
+    cv2.createTrackbar("V_LOW ","Parameters", 151, 255,empty)
+
 cv2.createTrackbar("Frame Ratio","Parameters",6,10,empty)
 cv2.createTrackbar("Sensetivity","Parameters", 4,10,empty)
-cv2.createTrackbar("Area Min","Parameters",5000,30000,empty)
-cv2.createTrackbar("Area Max","Parameters",100000,500000,empty)
+cv2.createTrackbar("Area Min","Parameters",10000,30000,empty)
+cv2.createTrackbar("Area Max","Parameters",400000,500000,empty)
 ROI_FRAME_RATIO = cv2.getTrackbarPos("Frame Ratio", "Parameters")/10
 
 ROWS = int(frameHeight * ROI_FRAME_RATIO)
@@ -79,8 +97,8 @@ def crop(img):
     IMAGE_X_INDEX = 0
 
     roi_vector = {'x' : 0, 'y' : 0, 'w' : 0, 'h': 0}
-    roi_vector['w'] = 640
-    roi_vector['h'] = int(480 * (cv2.getTrackbarPos("Frame Ratio","Parameters")/10))
+    roi_vector['w'] = 800
+    roi_vector['h'] = int(600 * (cv2.getTrackbarPos("Frame Ratio","Parameters")/10))
     roi_vector['x'] = 0
     roi_vector['y'] = img.shape[IMAGE_Y_INDEX] - roi_vector['h']
     y_start = roi_vector['y']
@@ -104,7 +122,7 @@ def polygon(ROWS,COLS,SENS):
 
 def superimpose(img,points):
     cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    cv2.polylines(img,[points],True,(0,0,0),5)
+    cv2.polylines(img,[points],True,(0,255,0),5)
     return img
 
 def poly_cont(img):
@@ -137,11 +155,15 @@ def findpath(img,imgContour,points,contours,Vis):
     y_list = []
     cnt_list = []
     ROWS = int(frameHeight * cv2.getTrackbarPos("Frame Ratio","Parameters")/10)
-    COLS = int(frameWidth)
+    COLS = int(frameWidth) 
     for cnt in contours:
-        if cv2.contourArea(cnt) > MIN_CONTOUR_AREA and cv2.contourArea(cnt) < MAX_CONTOUR_AREA:
+        pari = cv2.arcLength(cnt,True)
+        approx = cv2.approxPolyDP(cnt,0.02 * pari, True)
+        #print(len(approx))
+        if cv2.contourArea(cnt) > MIN_CONTOUR_AREA and cv2.contourArea(cnt) < MAX_CONTOUR_AREA and len(approx) >=  6 and len(approx) <=7:
             cnt = cv2.convexHull(cnt)
             moments = cv2.moments(cnt)
+            #approx = cv2.approxPolyDP(cnt,0.02 * pari, True) 
             com_x = int(moments['m10']/moments['m00'])
             com_y = int(moments['m01']/moments['m00'])
             if cv2.pointPolygonTest(points,(com_x,com_y),True) > 0:
@@ -307,9 +329,9 @@ while True:
         #Currently the ser.write is sending integers one character at a time. Cant get it to take them as a whole.
         #Also might have to take the sleep out to get better performance.(4/23 7:18p)
         if ARDUINO:
-            ser.write(str(angle_deviation).encode('utf-8'))
+            ser.write(int(angle_deviation)) 
+            #ser.write(str(angle_deviation).encode('utf-8'))
             sleep(0.4)
-            #ser.write(int(distance_unobstructed))
             while ser.in_waiting > 0:
                 line = ser.readline().decode('utf-8').rstrip()
                 print(line)
