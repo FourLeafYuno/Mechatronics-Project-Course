@@ -333,9 +333,11 @@ while True:
         contours,hierarchy  = poly_cont(imgDil)
         area = getContours(imgMask,cropped)
         if ARDUINO == True:
-            line = ser.read().decode('utf-8')
+            while ser.in_waiting > 0:
+                line = ser.read().decode('utf-8').rstrip()
+                print(line)
             if line == 'o':
-                if area ~= None;
+                if area != None:
                     if area > 10000:
                         ser.write(str(1).encode('utf-8'))
                         print("Ballon Found")
@@ -344,6 +346,10 @@ while True:
                         print("Balloon Not Found")
                 else:
                     ser.write(str(0).encode('utf-8'))
+                    print("Balloon Not Found")
+            while ser.in_waiting > 0:
+                line = ser.readline().decode('utf-8').rstrip()
+                print(line)
         
                 
         angle_deviation, distance_unobstructed, area_unobstructed = findpath(cropped,imgContours,points,contours, True)
