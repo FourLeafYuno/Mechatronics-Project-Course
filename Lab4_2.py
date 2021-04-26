@@ -14,7 +14,7 @@ import math
 # Frame size in pixels
 frameWidth = 800
 frameHeight = 600
-ARDUINO = True
+ARDUINO = False
 VS = "red"
 
 #Establishes serial connection with the Arduino before the code can be run
@@ -312,7 +312,7 @@ while True:
 
         imgGray = cv2.cvtColor(imgImp,cv2.COLOR_BGR2GRAY)
         imgBlur = cv2.medianBlur(imgGray,3)
-        imgBlur = cv2.GaussianBlur(imgGray,(5,5),0)
+        imgBlur = cv2.GaussianBlur(imgBlur,(5,5),0)
         #cv2.imshow("Blur",imgBlur)
 
         imgCanny = cv2.Canny(imgBlur,threshold1,threshold2)
