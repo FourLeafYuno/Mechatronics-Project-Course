@@ -16,8 +16,9 @@ import time
 # Frame size in pixels
 frameWidth = 800
 frameHeight = 600
-ARDUINO = True
+ARDUINO = False
 VS = "red"
+area = []
 
 #Establishes serial connection with the Arduino before the code can be run
 if ARDUINO:
@@ -93,7 +94,7 @@ def getContours(img,imgContour):
             cv2.putText(imgContour, "Points: " + str(len(approx)),(x + w + 20, y + 20),cv2.FONT_HERSHEY_COMPLEX, .7, (0,0,255),2)
             cv2.putText(imgContour, "Area: " + str(int(area)), (x + w + 20, y + 45), cv2.FONT_HERSHEY_COMPLEX,0.7,(0,0,255),2)
             b = True
-
+            return area
 def crop(img):
     IMAGE_Y_INDEX = 1
     IMAGE_X_INDEX = 0
@@ -304,16 +305,9 @@ while True:
         success, img = cap.read()
         img = cv2.flip(img,0)
         img = cv2.flip(img,1)
-        line = ser.readline().decode('utf-8').rstrip() 
-        if line == 'o' and ARDUINO == True:
-            imgMask = cv2.inRange(imgHSV,lg,ug)
-            getContours(imgMask,imgContours)
-            if area > 1000:
-                ser.write(str(1).encode('utf-8'))
-                print("Balooooooooon")
-            else:
-                ser.write(str(0).encode('utf-8'))
-                print("Nah dog")
+        imgContours = img.copy()
+
+
         cropped,h,w  = crop(img)
         #print("Goodbye")
         imgHSV = cv2.cvtColor(cropped,cv2.COLOR_BGR2HSV)
@@ -337,7 +331,21 @@ while True:
         imgDil = ~imgDil
         #cv2.imshow("Dil", imgDil)
         contours,hierarchy  = poly_cont(imgDil)
-        contours_p = getContours(imgMask,cropped)
+        area = getContours(imgMask,cropped)
+        if ARDUINO == True:
+            line = ser.read().decode('utf-8')
+            if line == 'o':
+                if area ~= None;
+                    if area > 10000:
+                        ser.write(str(1).encode('utf-8'))
+                        print("Ballon Found")
+                    else:
+                        ser.write(str(0).encode('utf-8'))
+                        print("Balloon Not Found")
+                else:
+                    ser.write(str(0).encode('utf-8'))
+        
+                
         angle_deviation, distance_unobstructed, area_unobstructed = findpath(cropped,imgContours,points,contours, True)
 
         #Currently the ser.write is sending integers one character at a time. Cant get it to take them as a whole.
