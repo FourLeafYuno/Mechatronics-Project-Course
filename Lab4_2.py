@@ -6,6 +6,8 @@ from signal import pause
 import serial
 import os
 import math
+import time
+
 
 #This line solves the issue of being unable to run the code in ssh given the
 #error "Cannot connect to X server"
@@ -136,7 +138,7 @@ def poly_cont(img):
     #bin_image = cv2.dilate(bin_image, kernel, iterations = 1)
     bin_image = cv2.erode(bin_image, kernel, iterations = 1)
     #bin_image = ~bin_image
-    cv2.imshow("Binary",bin_image)
+    #cv2.imshow("Binary",bin_image)
     contours, hierarchy = cv2.findContours(bin_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     #Might want to put the ConvexHull here
     return contours, hierarchy
@@ -193,6 +195,7 @@ def comnd(ipt):
         ipt = input("Please Enter a Command: ")
         if ipt == "list":
             print("List of Commands:   ")
+            print("")
             print("Command:     What it Do:")
             print("")
             print("F            Forward")
@@ -299,6 +302,7 @@ while True:
         lg = np.array([cv2.getTrackbarPos("H_LOW ","Parameters"),cv2.getTrackbarPos("S_LOW ","Parameters"),cv2.getTrackbarPos("V_LOW ","Parameters")])
         ug = np.array([cv2.getTrackbarPos("H_HIGH ","Parameters"),cv2.getTrackbarPos("S_HIGH ","Parameters"),cv2.getTrackbarPos("V_HIGH ","Parameters")])
         success, img = cap.read()
+        img = cv2.flip(img,0)
         #print("Hello")
         cropped,h,w  = crop(img)
         #print("Goodbye")
@@ -328,18 +332,18 @@ while True:
 
         #Currently the ser.write is sending integers one character at a time. Cant get it to take them as a whole.
         #Also might have to take the sleep out to get better performance.(4/23 7:18p)
-        if ARDUINO and angle_deviation < 30:
+        if ARDUINO and angle_deviation < 25:
             #ser.write(int(angle_deviation)) 
             #ser.write(int(angle_deviation).encode('utf-8'))
-            if (angle_deviation < -10):
+            if (angle_deviation < -25):
                 ser.write(str(2).encode('utf-8'))
                 sleep(.1)
                 print("left")
-            if (angle_deviation > 10):
+            if (angle_deviation > 25):
                 ser.write(str(3).encode('utf-8'))
                 print("right")
                 sleep(.1)
-            if (angle_deviation >=  -10 and angle_deviation <= 10):
+            if (angle_deviation >=  -25 and angle_deviation <= 25):
                 ser.write(str(1).encode('utf-8'))
                 print("straight")
                 sleep(.1)
@@ -354,5 +358,15 @@ while True:
         #cv2.imshow("Result",imgStack)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+
+    while ipt == "q":
+        if ARDUINO:
+            ser.write(str(v).encode('utf-8'))
+        start = time.time()
+        input("Press to stop turn")
+        if ARDUINO:
+            ser.write(str(S).encode('utf-8'))
+        stop = time.time()
+        print(stop - start)
 cap.release()
 cv2.destroyAllWindows()
