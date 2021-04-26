@@ -303,7 +303,17 @@ while True:
         ug = np.array([cv2.getTrackbarPos("H_HIGH ","Parameters"),cv2.getTrackbarPos("S_HIGH ","Parameters"),cv2.getTrackbarPos("V_HIGH ","Parameters")])
         success, img = cap.read()
         img = cv2.flip(img,0)
-        #print("Hello")
+        img = cv2.flip(img,1)
+        line = ser.readline().decode('utf-8').rstrip() 
+        if line == 'o' and ARDUINO == True:
+            imgMask = cv2.inRange(imgHSV,lg,ug)
+            getContours(imgMask,imgContours)
+            if area > 1000:
+                ser.write(str(1).encode('utf-8'))
+                print("Balooooooooon")
+            else:
+                ser.write(str(0).encode('utf-8'))
+                print("Nah dog")
         cropped,h,w  = crop(img)
         #print("Goodbye")
         imgHSV = cv2.cvtColor(cropped,cv2.COLOR_BGR2HSV)
