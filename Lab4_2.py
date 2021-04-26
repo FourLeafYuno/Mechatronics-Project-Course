@@ -16,7 +16,7 @@ import time
 # Frame size in pixels
 frameWidth = 800
 frameHeight = 600
-ARDUINO = False
+ARDUINO = True
 VS = "red"
 
 #Establishes serial connection with the Arduino before the code can be run
@@ -296,7 +296,7 @@ while True:
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-    while ipt == "P":
+    while ipt == "M":
         threshold1 = cv2.getTrackbarPos("Thresh 1","Parameters")
         threshold2 = cv2.getTrackbarPos("Thresh 2","Parameters")
         lg = np.array([cv2.getTrackbarPos("H_LOW ","Parameters"),cv2.getTrackbarPos("S_LOW ","Parameters"),cv2.getTrackbarPos("V_LOW ","Parameters")])
@@ -335,15 +335,15 @@ while True:
         if ARDUINO and angle_deviation < 25:
             #ser.write(int(angle_deviation)) 
             #ser.write(int(angle_deviation).encode('utf-8'))
-            if (angle_deviation < -25):
+            if (angle_deviation < -20):
                 ser.write(str(2).encode('utf-8'))
                 sleep(.1)
                 print("left")
-            if (angle_deviation > 25):
+            if (angle_deviation > 20):
                 ser.write(str(3).encode('utf-8'))
                 print("right")
                 sleep(.1)
-            if (angle_deviation >=  -25 and angle_deviation <= 25):
+            if (angle_deviation >=  -20 and angle_deviation <= 20):
                 ser.write(str(1).encode('utf-8'))
                 print("straight")
                 sleep(.1)
@@ -361,12 +361,13 @@ while True:
 
     while ipt == "q":
         if ARDUINO:
-            ser.write(str(v).encode('utf-8'))
+            ser.write(str('v').encode('utf-8'))
         start = time.time()
         input("Press to stop turn")
         if ARDUINO:
-            ser.write(str(S).encode('utf-8'))
+            ser.write(str('S').encode('utf-8'))
         stop = time.time()
         print(stop - start)
+        break
 cap.release()
 cv2.destroyAllWindows()
